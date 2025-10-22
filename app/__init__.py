@@ -4,51 +4,72 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 import os
+import psycopg2
+from dotenv import load_dotenv  # ✅ Added this line
+
+# --- Load environment variables from .env ---
+load_dotenv()  # ✅ This ensures DATABASE_URL and JWT_SECRET_KEY are loaded
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 jwt = JWTManager()
 
+
 def create_app():
     app = Flask(__name__)
 
-    # --- Use DATABASE_URL (works for Docker and Railway) ---
+    # --- Get DATABASE_URL from environment ---
     db_url = os.getenv("DATABASE_URL")
 
-    if not db_url:
-        raise RuntimeError("❌ DATABASE_URL not set. Please add it to your environment variables.")
+    # --- Debugging Log ---
+    print("🔍 Checking DATABASE_URL environment variable...")
+    if db_url:
+        print(f"✅ DATABASE_URL found: {db_url}")
+    else:
+        print("❌ DATABASE_URL is missing! Flask will not start.")
+        raise RuntimeError("DATABASE_URL not set in environment variables.")
 
-    # Fix for old-style postgres:// URLs
+    # --- Convert old postgres:// URL if necessary ---
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
+        print("ℹ️ Converted old postgres:// to postgresql://")
 
+    # --- Test PostgreSQL connection before starting ---
+    try:
+        print("🧩 Testing database connection...")
+        conn = psycopg2.connect(db_url)
+        conn.close()
+        print("✅ PostgreSQL connection successful.")
+    except Exception as e:
+        print(f"❌ Failed to connect to PostgreSQL: {e}")
+        raise RuntimeError("Database connection failed. Check DATABASE_URL or Railway settings.")
+
+    # --- Flask Config ---
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecret")
 
-    # --- Initialize extensions ---
+    # --- Initialize Extensions ---
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, origins=["https://ai-crop-disease-frontend.vercel.app"], supports_credentials=True)
 
-    # --- Register routes ---
+    # --- Register Blueprints ---
     from app.routes.auth_routes import auth_bp
     from app.routes.ai_routes import ai_bp
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
-    # --- Health check route ---
+    # --- Health Check Route ---
     @app.route("/api/health")
     def health():
         return {"status": "ok"}, 200
 
-    # --- Safe DB connection test (no crash if DB not ready yet) ---
-    @app.before_request
-    def check_db_connection():
-        try:
-            db.session.execute("SELECT 1")
-        except Exception as e:
-            print("⚠️ Database not ready:", e)
+    # --- Create Tables ---
+    with app.app_context():
+        db.create_all()
+        print("🗂️ All tables created or already exist.")
 
+    print("🚀 Flask app initialized successfully and ready to serve.")
     return app
