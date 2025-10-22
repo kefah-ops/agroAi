@@ -1,0 +1,28 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/mydb
+      JWT_SECRET_KEY: supersecret
+    ports:
+      - "5000:5000"
+    command: flask run --host=0.0.0.0
+
+volumes:
+  postgres_data:

@@ -12,11 +12,11 @@ jwt = JWTManager()
 def create_app():
     app = Flask(__name__)
 
-    # --- Use Railway’s DATABASE_URL ---
+    # --- Use DATABASE_URL (works for Docker and Railway) ---
     db_url = os.getenv("DATABASE_URL")
 
     if not db_url:
-        raise RuntimeError("❌ DATABASE_URL not set. Please add it in Railway environment variables.")
+        raise RuntimeError("❌ DATABASE_URL not set. Please add it to your environment variables.")
 
     # Fix for old-style postgres:// URLs
     if db_url.startswith("postgres://"):
@@ -38,12 +38,17 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
-    # --- Optional health check ---
+    # --- Health check route ---
     @app.route("/api/health")
     def health():
         return {"status": "ok"}, 200
 
-    with app.app_context():
-        db.create_all()
+    # --- Safe DB connection test (no crash if DB not ready yet) ---
+    @app.before_request
+    def check_db_connection():
+        try:
+            db.session.execute("SELECT 1")
+        except Exception as e:
+            print("⚠️ Database not ready:", e)
 
     return app
