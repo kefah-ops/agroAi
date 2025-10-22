@@ -53,7 +53,10 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    CORS(app, origins=["https://ai-crop-disease-frontend.vercel.app"], supports_credentials=True)
+
+    frontend_url = "https://ai-crop-disease-frontend.vercel.app"
+    CORS(app, resources={r"/api/*": {"origins": frontend_url}}, supports_credentials=True)
+
 
     # --- Register Blueprints ---
     from app.routes.auth_routes import auth_bp
