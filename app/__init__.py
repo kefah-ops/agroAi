@@ -5,10 +5,10 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 import os
 import psycopg2
-from dotenv import load_dotenv  # ✅ Added this line
+from dotenv import load_dotenv
 
 # --- Load environment variables from .env ---
-load_dotenv()  # ✅ This ensures DATABASE_URL and JWT_SECRET_KEY are loaded
+load_dotenv()
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
@@ -54,9 +54,19 @@ def create_app():
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    frontend_url = "https://ai-crop-disease-frontend.vercel.app"
-    CORS(app, resources={r"/api/*": {"origins": frontend_url}}, supports_credentials=True)
-
+    # --- CORS Configuration (FIXED) ---
+    CORS(app, 
+         resources={r"/api/*": {
+             "origins": [
+                 "https://ai-crop-disease-frontend.vercel.app",
+                 "https://*.app.github.dev",  # Allow all Codespace URLs
+                 "http://localhost:3000",
+                 "http://localhost:4200"
+             ],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "supports_credentials": True
+         }})
 
     # --- Register Blueprints ---
     from app.routes.auth_routes import auth_bp
