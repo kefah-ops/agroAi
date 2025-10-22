@@ -15,11 +15,19 @@ def create_app():
     app = Flask(__name__)
 
     # --- Database Configuration ---
-    db_url = os.getenv("DATABASE_URL", "sqlite:///instance/db.sqlite3")
+    db_url = os.getenv("DATABASE_URL")
 
-    # Fix for old postgres:// URIs
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    if db_url:
+        print("✅ DATABASE_URL found, using PostgreSQL")
+        # Ensure proper URI format
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+        # Add SSL requirement for Railway Postgres
+        if "sslmode" not in db_url:
+            db_url += "?sslmode=require"
+    else:
+        print("⚠️ DATABASE_URL not found! Falling back to SQLite.")
+        db_url = "sqlite:///instance/db.sqlite3"
 
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -38,7 +46,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
-    # Optional: Health check route
+    # --- Health Check ---
     @app.route("/api/health")
     def health():
         return {"status": "ok"}, 200
