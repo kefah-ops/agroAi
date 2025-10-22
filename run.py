@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app, db
 
+# 👇 This must be outside so Gunicorn can detect it
 app = create_app()
 
 if __name__ == "__main__":
