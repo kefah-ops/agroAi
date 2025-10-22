@@ -14,25 +14,41 @@ def create_app():
     load_dotenv()
     app = Flask(__name__)
 
-    # Config
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///instance/db.sqlite3')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'supersecret')
+    # --- Database Configuration ---
+    db_url = os.getenv("DATABASE_URL", "sqlite:///instance/db.sqlite3")
 
-    # Init extensions
+    # Fix for old postgres:// URIs
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecret")
+
+    # --- Initialize Extensions ---
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
     CORS(app)
 
-    # Register blueprints
+    # --- Register Blueprints ---
     from app.routes.auth_routes import auth_bp
     from app.routes.ai_routes import ai_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
+    # Optional: Health check route
+    @app.route("/api/health")
+    def health():
+        return {"status": "ok"}, 200
+
+    # --- Create Tables ---
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("✅ Database tables created successfully")
+        except Exception as e:
+            print(f"❌ Database initialization error: {e}")
 
     return app
