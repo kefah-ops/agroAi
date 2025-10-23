@@ -38,8 +38,6 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# --- Diagnose Endpoint ---
 @ai_bp.route('/diagnose', methods=['POST'])
 @jwt_required()
 def diagnose():
@@ -48,16 +46,19 @@ def diagnose():
 
     try:
         image = request.files['image']
-        image_path = f"temp_{image.filename}"
-        image.save(image_path)
-
-        img = Image.open(image_path)
-        model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
+        model = genai.GenerativeModel("models/gemini-2.5-flash")
 
         prompt = "Analyze this crop image and describe any possible diseases or visible issues."
 
-        response = model.generate_content([prompt, img])
-        diagnosis_text = response.text or "No diagnosis generated."
+        response = model.generate_content([
+            prompt,
+            {"mime_type": image.mimetype, "data": image.read()}
+        ])
+
+        diagnosis_text = getattr(response, "text", None)
+        if not diagnosis_text and hasattr(response, "candidates"):
+            diagnosis_text = response.candidates[0].content.parts[0].text
+        diagnosis_text = diagnosis_text or "No diagnosis generated."
 
         return jsonify({"diagnosis": diagnosis_text})
 

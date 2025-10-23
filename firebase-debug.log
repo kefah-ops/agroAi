@@ -1,0 +1,62 @@
+[debug] [2025-10-22T20:36:06.858Z] ----------------------------------------------------------------------
+[debug] [2025-10-22T20:36:06.861Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kefah\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-10-22T20:36:06.862Z] CLI Version:   14.20.0
+[debug] [2025-10-22T20:36:06.862Z] Platform:      win32
+[debug] [2025-10-22T20:36:06.863Z] Node Version:  v22.14.0
+[debug] [2025-10-22T20:36:06.863Z] Time:          Wed Oct 22 2025 23:36:06 GMT+0300 (East Africa Time)
+[debug] [2025-10-22T20:36:06.864Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\AI\BackEnd
+
+Before we get started, keep in mind:
+
+  * You are currently outside your home directory
+  * You are initializing within an existing Firebase project directory
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[info] i  If you want to create a project in a Google Cloud organization or folder, please use "firebase projects:create" instead, and return to this command when you've created the project. 
+[debug] [2025-10-22T20:36:48.719Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-22T20:36:48.719Z] > authorizing via signed-in user (ndirangukefah@gmail.com)
+[debug] [2025-10-22T20:37:01.466Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:01.466Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:01.468Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1/projects:checkProjectId [none]
+[debug] [2025-10-22T20:37:01.469Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"proposedId":"kefah-projects"}
+[debug] [2025-10-22T20:37:02.052Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1/projects:checkProjectId 200
+[debug] [2025-10-22T20:37:02.052Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"projectIdStatus":"PROJECT_ID_AVAILABLE","suggestedProjectId":"kefah-projects"}
+[debug] [2025-10-22T20:37:39.298Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:39.298Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:39.300Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects [none]
+[debug] [2025-10-22T20:37:39.300Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects {"projectId":"kefah-projects","name":"kefahbackend"}
+[debug] [2025-10-22T20:37:41.216Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects 200
+[debug] [2025-10-22T20:37:41.216Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects {"name":"operations/create_project.global.4917862674487762806"}
+[debug] [2025-10-22T20:37:41.218Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:41.218Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:41.219Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/operations/create_project.global.4917862674487762806 [none]
+[debug] [2025-10-22T20:37:42.523Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/operations/create_project.global.4917862674487762806 200
+[debug] [2025-10-22T20:37:42.524Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/operations/create_project.global.4917862674487762806 {"name":"operations/create_project.global.4917862674487762806","metadata":{"@type":"type.googleapis.com/google.cloudresourcemanager.v1.ProjectCreationStatus","gettable":true,"ready":true},"done":true,"response":{"@type":"type.googleapis.com/google.cloudresourcemanager.v1.Project","projectNumber":"945449771935","projectId":"kefah-projects","lifecycleState":"ACTIVE","name":"kefahbackend","createTime":"2025-10-22T20:37:43.365265Z"}}
+[debug] [2025-10-22T20:37:42.533Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:42.533Z] Checked if tokens are valid: true, expires at: 1761168329784
+[debug] [2025-10-22T20:37:42.535Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1beta1/projects/kefah-projects:addFirebase [none]
+[debug] [2025-10-22T20:37:43.906Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1beta1/projects/kefah-projects:addFirebase 403
+[debug] [2025-10-22T20:37:43.906Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/kefah-projects:addFirebase {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2025-10-22T20:37:43.908Z] Request to https://firebase.googleapis.com/v1beta1/projects/kefah-projects:addFirebase had HTTP Error: 403, The caller does not have permission
+[debug] [2025-10-22T20:37:44.220Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/kefah-projects:addFirebase had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Kefah\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:53:12)
+    at RetryOperation._fn (C:\Users\Kefah\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:312:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[error] 
+[error] Error: Failed to add Firebase to Google Cloud Platform project. See firebase-debug.log for more info.

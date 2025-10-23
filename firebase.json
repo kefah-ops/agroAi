@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "site": "kefah-backend",
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "kefah-backend",
+          "region": "us-central1"
+        }
+      }
+    ]
+  }
+}
