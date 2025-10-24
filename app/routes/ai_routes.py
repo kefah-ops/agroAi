@@ -2,139 +2,85 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import google.generativeai as genai
 import os
-import re  # ✅ ADD THIS IMPORT
 
-ai_bp = Blueprint('ai_bp', __name__)
+ai_bp = Blueprint("ai_bp", __name__)
 
-# Configure Gemini API globally
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-
-# --- Chat Endpoint ---
 @ai_bp.route('/chat', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def chat():
-    """Chat endpoint using Gemini AI"""
+    """Unified AI endpoint for text and image input using Gemini"""
     
-    print(f"📨 Received {request.method} request to /chat")
-    
-    # Handle preflight
+    # --- Handle CORS preflight ---
     if request.method == 'OPTIONS':
         return '', 200
-    
-    try:
-        current_user_id = get_jwt_identity()
-        print(f"✅ Authenticated user: {current_user_id}")
-        
-        data = request.get_json()
-        user_message = data.get('message')
-        
-        if not user_message:
-            return jsonify({"error": "Message is required"}), 400
-        
-        print(f"💬 User message: {user_message}")
-        
-        # Use Gemini for chat
-        model = genai.GenerativeModel("models/gemini-2.0-flash-exp")
-        
-        prompt = f"""You are AgroAI, an expert agricultural assistant specializing in crop health and farming advice.
-        
-User question: {user_message}
-
-Provide a helpful, practical response focused on agriculture and crop management."""
-
-        response = model.generate_content(prompt)
-        
-        # Extract response text
-        response_text = getattr(response, "text", None)
-        if not response_text and hasattr(response, "candidates"):
-            response_text = response.candidates[0].content.parts[0].text
-        response_text = response_text or "I couldn't generate a response. Please try again."
-        
-        print(f"🤖 AI response: {response_text[:100]}...")
-        
-        return jsonify({
-            "user": current_user_id,
-            "user_message": user_message,
-            "response": response_text
-        }), 200
-        
-    except Exception as e:
-        print(f"❌ Chat error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-
-@ai_bp.route('/diagnose', methods=['POST', 'OPTIONS'])
-@jwt_required()
-def diagnose():
-    """Diagnose image using Gemini AI (JSON Enforced)"""
-    
-    print(f"📨 Received {request.method} request to /diagnose")
-
-    # Handle CORS preflight
-    if request.method == 'OPTIONS':
-        return '', 200
-
-    if 'image' not in request.files:
-        print("❌ No image file in request")
-        return jsonify({"error": "Image file is required"}), 400
 
     try:
         current_user_id = get_jwt_identity()
         print(f"✅ Authenticated user: {current_user_id}")
 
-        image = request.files['image']
-        print(f"📷 Processing image: {image.filename}")
+        # --- Handle text or image ---
+        if request.content_type.startswith('multipart/form-data'):
+            # User uploaded an image
+            file = request.files.get('image')
+            if not file:
+                return jsonify({"error": "No image file provided"}), 400
 
-        model = genai.GenerativeModel("models/gemini-2.0-flash-exp")
+            # Save temporarily
+            filepath = f"/tmp/{file.filename}"
+            file.save(filepath)
 
-        # ✅ Enforce JSON output
-        prompt = """
-        You are an expert plant pathologist AI. 
-        Analyze the provided image and return ONLY a valid JSON object in this format:
-        {
-          "disease": "Disease name or 'Healthy'",
-          "confidence": 0.0 to 1.0,
-          "recommendation": "Actionable treatment or prevention advice"
-        }
+            print(f"🖼️ Received image: {file.filename}")
 
-        Do NOT include any explanation or text outside the JSON.
-        """
+            # Use Gemini vision model
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content([
+                "You are AgroAI, an expert crop health assistant. Analyze this image of a plant leaf and detect if it has any disease. Include disease name, confidence level, and farming recommendations.",
+                {"mime_type": "image/jpeg", "data": open(filepath, "rb").read()}
+            ])
 
-        image_data = image.read()
-        response = model.generate_content([
-            prompt,
-            {"mime_type": image.mimetype, "data": image_data}
-        ])
+            diagnosis_text = getattr(response, "text", None)
+            if not diagnosis_text and hasattr(response, "candidates"):
+                diagnosis_text = response.candidates[0].content.parts[0].text
+            diagnosis_text = diagnosis_text or "No diagnosis available."
 
-        # Extract raw Gemini text
-        diagnosis_text = getattr(response, "text", None)
-        if not diagnosis_text and hasattr(response, "candidates"):
-            diagnosis_text = response.candidates[0].content.parts[0].text
-        diagnosis_text = diagnosis_text.strip() if diagnosis_text else "{}"
+            print(f"🧠 AI Diagnosis: {diagnosis_text[:120]}...")
+            return jsonify({
+                "type": "image_analysis",
+                "response": diagnosis_text
+            }), 200
 
-        print(f"🔬 Gemini Raw Output: {diagnosis_text}")
+        else:
+            # Handle normal chat messages
+            data = request.get_json()
+            query = data.get('message')
+            if not query:
+                return jsonify({"error": "No message provided"}), 400
 
-        # ✅ Try parsing as JSON
-        import json
-        try:
-            diagnosis_json = json.loads(diagnosis_text)
-        except json.JSONDecodeError:
-            print("⚠️ Gemini did not return valid JSON, fallback to manual parsing")
-            diagnosis_json = {
-                "disease": "Unknown",
-                "confidence": 0.0,
-                "recommendation": diagnosis_text
-            }
+            print(f"💬 Text message: {query}")
 
-        print(f"✅ Parsed Diagnosis: {diagnosis_json}")
+            model = genai.GenerativeModel("gemini-2.0-flash-exp")
+            prompt = f"""
+You are AgroAI, an expert agricultural assistant specializing in crop health and farming advice.
 
-        return jsonify(diagnosis_json), 200
+User: {query}
+
+Provide a helpful, practical, and accurate farming response.
+"""
+            response = model.generate_content(prompt)
+
+            response_text = getattr(response, "text", None)
+            if not response_text and hasattr(response, "candidates"):
+                response_text = response.candidates[0].content.parts[0].text
+            response_text = response_text or "I couldn't generate a response. Please try again."
+
+            print(f"🤖 AI Response: {response_text[:100]}...")
+            return jsonify({
+                "type": "text_chat",
+                "response": response_text
+            }), 200
 
     except Exception as e:
-        print(f"❌ Diagnosis error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ AI Route Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
