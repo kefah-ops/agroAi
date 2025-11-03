@@ -7,80 +7,79 @@ ai_bp = Blueprint("ai_bp", __name__)
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-@ai_bp.route('/chat', methods=['POST', 'OPTIONS'])
+FREE_MODEL = "models/gemini-2.5-flash"
+
+@ai_bp.route("/models", methods=["GET"])
 @jwt_required()
-def chat():
-    """Unified AI endpoint for text and image input using Gemini"""
-    
-    # --- Handle CORS preflight ---
-    if request.method == 'OPTIONS':
-        return '', 200
-
+def list_models():
     try:
-        current_user_id = get_jwt_identity()
-        print(f"✅ Authenticated user: {current_user_id}")
+        models = genai.list_models()
 
-        # --- Handle text or image ---
-        if request.content_type.startswith('multipart/form-data'):
-            # User uploaded an image
-            file = request.files.get('image')
-            if not file:
-                return jsonify({"error": "No image file provided"}), 400
+        model_info = []
+        for m in models:
+            model_info.append({
+                "name": getattr(m, "name", None)
+            })
 
-            # Save temporarily
-            filepath = f"/tmp/{file.filename}"
-            file.save(filepath)
-
-            print(f"🖼️ Received image: {file.filename}")
-
-            # Use Gemini vision model
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content([
-                "You are AgroAI, an expert crop health assistant. Analyze this image of a plant leaf and detect if it has any disease. Include disease name, confidence level, and farming recommendations.",
-                {"mime_type": "image/jpeg", "data": open(filepath, "rb").read()}
-            ])
-
-            diagnosis_text = getattr(response, "text", None)
-            if not diagnosis_text and hasattr(response, "candidates"):
-                diagnosis_text = response.candidates[0].content.parts[0].text
-            diagnosis_text = diagnosis_text or "No diagnosis available."
-
-            print(f"🧠 AI Diagnosis: {diagnosis_text[:120]}...")
-            return jsonify({
-                "type": "image_analysis",
-                "response": diagnosis_text
-            }), 200
-
-        else:
-            # Handle normal chat messages
-            data = request.get_json()
-            query = data.get('message')
-            if not query:
-                return jsonify({"error": "No message provided"}), 400
-
-            print(f"💬 Text message: {query}")
-
-            model = genai.GenerativeModel("gemini-2.0-flash-exp")
-            prompt = f"""
-You are AgroAI, an expert agricultural assistant specializing in crop health and farming advice.
-
-User: {query}
-
-Provide a helpful, practical, and accurate farming response.
-"""
-            response = model.generate_content(prompt)
-
-            response_text = getattr(response, "text", None)
-            if not response_text and hasattr(response, "candidates"):
-                response_text = response.candidates[0].content.parts[0].text
-            response_text = response_text or "I couldn't generate a response. Please try again."
-
-            print(f"🤖 AI Response: {response_text[:100]}...")
-            return jsonify({
-                "type": "text_chat",
-                "response": response_text
-            }), 200
+        return jsonify({"models": model_info}), 200
 
     except Exception as e:
-        print(f"❌ AI Route Error: {str(e)}")
+        print("❌ LIST MODELS ERROR:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@ai_bp.route("/chat", methods=["POST"])
+@jwt_required()
+def chat():
+    try:
+        user = get_jwt_identity()
+        data = request.get_json()
+        message = data.get("message", "")
+
+        if not message:
+            return jsonify({"error": "Message required"}), 400
+
+        model = genai.GenerativeModel(FREE_MODEL)
+        response = model.generate_content(
+            f"You are AgroAI. Help farmers.\nUser: {message}"
+        )
+
+        return jsonify({ "response": response.text }), 200
+
+    except Exception as e:
+        print("❌ CHAT ERROR:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@ai_bp.route("/diagnose", methods=["POST"])
+@jwt_required()
+def diagnose():
+    try:
+        user = get_jwt_identity()
+
+        if "image" not in request.files:
+            return jsonify({"error": "No image uploaded"}), 400
+
+        file = request.files["image"]
+        filepath = f"/tmp/{file.filename}"
+        file.save(filepath)
+
+        model = genai.GenerativeModel(FREE_MODEL)
+        
+        with open(filepath, "rb") as img:
+            img_data = img.read()
+
+        response = model.generate_content([
+            "Analyze crop disease, confidence and treatment.",
+            {"mime_type": "image/jpeg", "data": img_data}
+        ])
+
+        os.remove(filepath)
+
+        return jsonify({ "diagnosis": response.text }), 200
+
+    except Exception as e:
+        print("❌ DIAG ERROR:", e)
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
         return jsonify({"error": str(e)}), 500
