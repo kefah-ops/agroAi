@@ -1,3 +1,5 @@
+from datetime import timedelta  # ✅ add this import
+
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -29,12 +31,10 @@ def create_app():
         print("❌ DATABASE_URL is missing! Flask will not start.")
         raise RuntimeError("DATABASE_URL not set in environment variables.")
 
-    # --- Convert old postgres:// URL if necessary ---
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
         print("ℹ️ Converted old postgres:// to postgresql://")
 
-    # --- Test PostgreSQL connection before starting ---
     try:
         print("🧩 Testing database connection...")
         conn = psycopg2.connect(db_url)
@@ -42,24 +42,28 @@ def create_app():
         print("✅ PostgreSQL connection successful.")
     except Exception as e:
         print(f"❌ Failed to connect to PostgreSQL: {e}")
-        raise RuntimeError("Database connection failed. Check DATABASE_URL or Railway settings.")
+        raise RuntimeError("Database connection failed.")
 
     # --- Flask Config ---
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecret")
 
+    # ✅ JWT Expiration Settings
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)  # logged in for 12 hours
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)  # refresh valid for 30 days
+
     # --- Initialize Extensions ---
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    # --- CORS Configuration (FIXED) ---
-    CORS(app, 
+    # --- CORS Configuration ---
+    CORS(app,
          resources={r"/api/*": {
              "origins": [
                  "https://ai-crop-disease-frontend.vercel.app",
-                 "https://*.app.github.dev",  # Allow all Codespace URLs
+                 "https://*.app.github.dev",
                  "http://localhost:3000",
                  "http://localhost:4200"
              ],
@@ -74,12 +78,10 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
-    # --- Health Check Route ---
     @app.route("/api/health")
     def health():
         return {"status": "ok"}, 200
 
-    # --- Create Tables ---
     with app.app_context():
         db.create_all()
         print("🗂️ All tables created or already exist.")
